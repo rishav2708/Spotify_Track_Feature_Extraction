@@ -4,8 +4,8 @@ from csv import DictReader
 from spotipy.oauth2 import SpotifyOAuth
 
 scope_auth = "user-read-private user-library-read user-read-private user-read-currently-playing user-read-recently-played user-follow-read playlist-read-private playlist-modify-public user-modify-playback-state"
-SPOTIPY_CLIENT_ID = "800343d83a574916a368c4d9a7910859"
-SPOTIPY_CLIENT_SECRET = "c6c4482bee4843828a4b768aeb1ddec0"
+SPOTIPY_CLIENT_ID = #Your Spotify Client ID
+SPOTIPY_CLIENT_SECRET = #Your Spotify Client Secret
 SPOTIPY_REDIRECT_URI = "http://localhost:1419"
 os.environ['SPOTIPY_CLIENT_ID'] = SPOTIPY_CLIENT_ID
 os.environ['SPOTIPY_CLIENT_SECRET'] = SPOTIPY_CLIENT_SECRET
