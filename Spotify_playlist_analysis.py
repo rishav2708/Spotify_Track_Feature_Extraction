@@ -1,22 +1,22 @@
-import spotipy,os,sys,random
+import spotipy,os,sys,random,glob
 from csv import DictWriter
 from csv import DictReader
 from spotipy.oauth2 import SpotifyOAuth
 
 scope_auth = "user-read-private user-library-read user-read-private user-read-currently-playing user-read-recently-played user-follow-read playlist-read-private playlist-modify-public user-modify-playback-state"
-SPOTIPY_CLIENT_ID = #Your Spotify Client ID
-SPOTIPY_CLIENT_SECRET = #Your Spotify Client Secret
+SPOTIPY_CLIENT_ID = #Your Client id
+SPOTIPY_CLIENT_SECRET = #Your Secret 
 SPOTIPY_REDIRECT_URI = "http://localhost:1419"
 os.environ['SPOTIPY_CLIENT_ID'] = SPOTIPY_CLIENT_ID
 os.environ['SPOTIPY_CLIENT_SECRET'] = SPOTIPY_CLIENT_SECRET
 os.environ['SPOTIPY_REDIRECT_URI'] = SPOTIPY_REDIRECT_URI
 current_play_list = []
-def create_recommended_playlist(scope, track_db):
+def create_recommended_playlist(scope, playlist_name,track_uris):
 	sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
-	user_info = sp.current_user()
-	playlist_info = sp.user_playlist_create(user_info["id"], "Recommended For Today", public = True, collaborative = False, description = "Based on what you are recently listening")
-	track_uris =[track_db[key][1] for key in track_db.keys()]
-	sp.user_playlist_add_tracks(user_info["id"],playlist_info["id"],track_uris)
+	user_info = sp.current_user() 
+	playlist_info = sp.user_playlist_create(user_info["id"], playlist_name, public = True, collaborative = False, description = "Based on what you are currently listening")
+	#track_uris =[track_db[key][1] for key in track_db.keys()]
+	sp.user_playlist_add_tracks(user_info["id"],playlist_info["id"],track_uris[0:99])
 def get_audio_features_tracks(file_name,spObj,track_name, track_id):
 	results = spObj.audio_features(track_id)
 	#print (list(results[0].keys()))
@@ -26,19 +26,20 @@ def get_audio_features_tracks(file_name,spObj,track_name, track_id):
 	track_contents["name"] = track_name
 	writeToCSV(file_name,track_features,track_contents)
 
-def get_track_recommendation(scope, track_db):
+def get_track_recommendation(file_name, scope, track_db):
 	track_db_keys = list(track_db.keys())
 	print (len(track_db_keys))
 	sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
-	results = sp.recommendations(seed_tracks=track_db_keys[0:5])
-	for i in results["tracks"]:
-		track_name = i["name"]
-		track_id = i["id"]
-		get_audio_features_tracks("recommended_list.csv",sp, track_name, track_id)
+	for i in range(0, len(track_db_keys)-5):
+		results = sp.recommendations(seed_tracks=track_db_keys[i:i+4])
+		for j in results["tracks"]:
+			track_name = j["name"]
+			track_id = j["id"]
+			get_audio_features_tracks(file_name,sp, track_name, track_id)
 	#print (results["tracks"][0])
 def readCSVJSON(file_name):
 	track_db = {}
-	with open(file_name, encoding = "utf-8") as csvObj:
+	with open(file_name, encoding = "cp1252") as csvObj:
 		csvReader = DictReader(csvObj)
 		for rows in csvReader:
 			key_id = rows["id"]
@@ -102,10 +103,34 @@ def get_current_playing_track_info(scope):
 def play_curated_list(scope,track_db):
 	sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 	track_uris =[track_db[key][1] for key in track_db.keys()]
-	print (track_uris)
+	#print (track_uris)
 	random_seed = random.randint(0, len(track_uris))
+	print ("random seed"+str(random_seed))
 	sp.start_playback(uris=track_uris, offset={"position":random_seed})
 
+def get_user_playlist_tracks(scope):
+	sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
+	user_info = sp.current_user() 
+	results = sp.current_user_playlists()
+	print (results.keys())
+	menu_num = 1
+	album_dict = {}
+	for i in results["items"]:
+		print (menu_num, i["name"], i["uri"], i["id"])
+		album_dict[menu_num]= {"id":i["id"],"name":i["name"]}
+		menu_num +=1
+	print ("Choose one album:")
+	album_menu_num = int(input())
+	file_name = "playlist"+album_dict[album_menu_num]["name"]+".csv"
+	print (file_name)
+	res1 = sp.user_playlist_tracks(user_info["id"],album_dict[album_menu_num]["id"])
+	for i in res1["items"]:
+		print (i["track"]["name"], i["track"]["id"])
+		track_name = i["track"]["name"]
+		track_id = i["track"]["id"]
+		get_audio_features_tracks(file_name, sp, track_name, track_id)
+	
+	#res1["items"][0]["track"]["name"]
 
 def main():
 	starter = sys.argv[1]
@@ -119,13 +144,20 @@ def main():
 		get_user_following(scope_auth)
 	elif (starter =="recommend"):
 		track_db = readCSVJSON(sys.argv[2])
-		get_track_recommendation(scope_auth, track_db)
+		recommend_file_name = sys.argv[2][:-4]+"recommended.csv"
+		print (recommend_file_name)
+		get_track_recommendation(recommend_file_name,scope_auth, track_db)
 	elif (starter =="play_randomized_playlist"):
 		track_db = readCSVJSON("recommended_list.csv")
 		play_curated_list(scope_auth, track_db)
 	elif (starter =="create_recommended_playlist"):
 		track_db = readCSVJSON("recommended_list.csv")
 		create_recommended_playlist(scope_auth,track_db)
+	elif (starter =="curate_tracks_from_playlist"):
+		get_user_playlist_tracks(scope_auth)
+	elif (starter =="delete_all_csv_files"):
+		for i in (glob.glob("*.csv")):
+			os.remove(i)
 	else:
 		print ("pass valid param")
 
