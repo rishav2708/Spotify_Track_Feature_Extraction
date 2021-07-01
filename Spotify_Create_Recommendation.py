@@ -12,13 +12,13 @@ os.environ['SPOTIPY_CLIENT_ID'] = SPOTIPY_CLIENT_ID
 os.environ['SPOTIPY_CLIENT_SECRET'] = SPOTIPY_CLIENT_SECRET
 os.environ['SPOTIPY_REDIRECT_URI'] = SPOTIPY_REDIRECT_URI
 
-def curateMixTape(recently_played_list):
+def readRecommendedTracks(categorised_recommended_list):
 	track_db = {}
-	with open(recently_played_list, encoding = "cp1252") as csvObj:
+	with open(categorised_recommended_list, encoding = "cp1252", errors="ignore") as csvObj:
 		csvReader = DictReader(csvObj)
 		for rows in csvReader:
-			key_id = rows["Category"]
-			track_db.setdefault(key_id,[]).append({"name": rows["name"], "uri": rows["uri"],"id": rows["id"]})
+			key_id = rows["predicted_category"]
+			track_db.setdefault(key_id,[]).append({"uri": rows["uri"],"id": rows["id"]})
 	return track_db
 def readCSVJSON(recently_played_list, recommended_played_list):
 	track_db = {}
@@ -37,16 +37,14 @@ def readCSVJSON(recently_played_list, recommended_played_list):
 	#csvReader2.close()
 	return track_db
 
-def play_categorical_track(track_db,key,scope):
+def curate_my_mix_track(track_db,key,scope, playlist_name,playlist_description):
 	sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 	list_of_songs = []
 	name_of_songs = []
 	for i in track_db[key]:
 		list_of_songs.append(i["uri"])
-		name_of_songs.append(i["name"])
-	print (name_of_songs)
 	#sp.start_playback(uris=list_of_songs[::-1])
-	create_recommended_playlist(scope_auth,"My Current Mix - QB Queen"+key,list_of_songs[::-1])
+	create_recommended_playlist(scope_auth,playlist_name,list_of_songs,playlist_description)
 
 	
 
@@ -70,8 +68,12 @@ def get_current_playing_track_info(scope):
 	return track_db
 
 if __name__ == "__main__":
-	categorised_db = readCSVJSON(sys.argv[1],sys.argv[2])
-	play_categorical_track(categorised_db,sys.argv[3],scope_auth)
+	file_name = sys.argv[1]
+	category_key = sys.argv[2]
+	playlist_name = sys.argv[3]
+	playlist_description = sys.argv[4]
+	categorised_db = readRecommendedTracks(file_name)
+	curate_my_mix_track(categorised_db,category_key,scope_auth,playlist_name,playlist_description)
 	#track_db = get_current_playing_track_info(scope_auth)
 	#get_track_recommendation(scope_auth, track_db)
 
