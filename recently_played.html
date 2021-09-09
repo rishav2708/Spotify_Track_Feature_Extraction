@@ -5,11 +5,27 @@
     <h6><a href="/">Return to index page</a></h6>
     <div id="chart" class="chart"></div>
     <div>{{description}}</div>
+    <div>
+    	{% for song in songs %}
+    		<li><a href="#">{{song}}</a></li>
+    	{% endfor %}
+    </div>
 </body>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script type="text/javascript">
-    var graphs = {{graphObj}};
-    Plotly.newplot('chart',graphs,{});        
+<script src="https://cdn.plot.ly/plotly-2.2.0.min.js"></script>
+<!--<script>
+	TESTER = document.getElementById('tester');
+	Plotly.newPlot( TESTER, [{
+	x: [1, 2, 3, 4, 5],
+	y: [1, 2, 4, 8, 16] }], {
+	margin: { t: 0 } } );
+</script> -->
+<script>
+    var graphs ={{graphJSON |safe}};
+    CHART = document.getElementById("chart");
+    Plotly.newPlot(CHART,graphs,{});        
 </script>
 </html>
